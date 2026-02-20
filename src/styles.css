@@ -173,11 +173,11 @@ body {
 }
 
 .table th,
-  opacity: 0.85;
-  transform: translateY(-1px);
+.table td {
   padding: 10px;
   border-bottom: 1px solid #ddd;
   text-align: left;
+  opacity: 0.85;
 }
 
 .table thead {
