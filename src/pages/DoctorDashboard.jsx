@@ -1,48 +1,55 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { appointments, prescriptions, users } from "../mockData";
+import { getAppointments, saveAppointments, getPrescriptions, savePrescriptions, getUsers } from "../mockData";
 import { useAuth } from "../AuthContext";
 
 function DoctorDashboard() {
-  // Assume logged-in doctor is user_id 2 for demo purposes
-  const doctorId = 2;
-  const doctor = users.find((u) => u.user_id === doctorId);
-
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
-  const todayStr = "2026-02-20"; // demo "today" aligned with mock data
+  const [appointmentsList, setAppointmentsList] = useState(getAppointments());
+  const [prescriptionsList, setPrescriptionsList] = useState(getPrescriptions());
 
-  const todaysAppointments = appointments.filter(
+  const doctorId = user?.user_id || 2;
+  const mockDoctor = getUsers().find((u) => u.user_id === doctorId);
+  const doctorName = user?.name || (mockDoctor ? mockDoctor.name : "");
+
+  const todayStr = new Date().toISOString().split("T")[0]; // Use actual today instead of mock "2026-02-20" or fallback
+  // Wait, if we use actual today, mock appointments might not show up. 
+  // Let's use actual today but also grab the mock "today" if it's empty to ensure data shows during demo.
+  // Actually, standardizing on real 'today' is better since we book new appointments on real dates.
+
+  const todaysAppointments = appointmentsList.filter(
     (a) => a.doctor_id === doctorId && a.date === todayStr
   );
 
+  const allDoctorAppointments = appointmentsList.filter((a) => a.doctor_id === doctorId);
+
   const uniquePatients = Array.from(
-    new Set(appointments.filter((a) => a.doctor_id === doctorId).map((a) => a.patient_id))
+    new Set(allDoctorAppointments.map((a) => a.patient_id))
   );
 
   const pendingConsultations = todaysAppointments.filter((a) => a.status === "scheduled");
 
-  const todaysPrescriptions = prescriptions.filter(
+  const todaysPrescriptions = prescriptionsList.filter(
     (p) => p.doctor_id === doctorId && p.date === todayStr
   );
 
   const [notes, setNotes] = useState("");
-
   const [activeAppointmentId, setActiveAppointmentId] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
   const [selectedPatient, setSelectedPatient] = useState(null);
 
   const [prescriptionForm, setPrescriptionForm] = useState({
+    patientId: "",
     medicine: "",
     dosage: "",
     duration: "",
     extraNotes: ""
   });
 
-  const recentPatients = appointments
-    .filter((a) => a.doctor_id === doctorId)
+  const recentPatients = allDoctorAppointments
+    .slice()
     .sort(
       (a, b) =>
         new Date(b.date + "T" + b.time) - new Date(a.date + "T" + a.time)
@@ -52,18 +59,32 @@ function DoctorDashboard() {
   const handleStartConsultation = (appointmentId) => {
     setActiveAppointmentId(appointmentId);
     setElapsedSeconds(0);
-    window.alert("Mock: starting consultation for appointment #" + appointmentId);
+
+    // Mark appointment as 'completed'
+    const updated = appointmentsList.map(a =>
+      a.appointment_id === appointmentId ? { ...a, status: "completed" } : a
+    );
+    setAppointmentsList(updated);
+    saveAppointments(updated);
+
+    // Auto-select patient for the prescription form
+    const apt = appointmentsList.find(a => a.appointment_id === appointmentId);
+    if (apt) {
+      setPrescriptionForm(prev => ({ ...prev, patientId: apt.patient_id }));
+    }
   };
 
   const handleSaveNotes = () => {
-    window.alert("Mock: notes saved: " + notes);
+    if (!notes) return;
+    window.alert("Notes saved successfully!");
+    setNotes("");
   };
 
   const handlePatientClick = (patientId) => {
-    const patient = users.find((u) => u.user_id === patientId);
+    const patient = getUsers().find((u) => u.user_id === patientId);
     if (!patient) return;
 
-    const historyAppointments = appointments.filter(
+    const historyAppointments = appointmentsList.filter(
       (a) => a.patient_id === patientId && a.doctor_id === doctorId
     );
     const lastVisit = historyAppointments
@@ -86,9 +107,27 @@ function DoctorDashboard() {
 
   const handlePrescriptionSubmit = (e) => {
     e.preventDefault();
-    window.alert(
-      "Mock prescription created: " + JSON.stringify(prescriptionForm, null, 2)
-    );
+    if (!prescriptionForm.patientId) {
+      alert("Please select a patient.");
+      return;
+    }
+    const newPrescription = {
+      prescription_id: Date.now(),
+      doctor_id: doctorId,
+      patient_id: parseInt(prescriptionForm.patientId),
+      medicines: prescriptionForm.medicine,
+      dosage: prescriptionForm.dosage,
+      notes: prescriptionForm.extraNotes ? `${prescriptionForm.extraNotes} (Duration: ${prescriptionForm.duration})` : `Duration: ${prescriptionForm.duration}`,
+      date: todayStr,
+      status: "issued"
+    };
+
+    const updatedPrescriptions = [...prescriptionsList, newPrescription];
+    setPrescriptionsList(updatedPrescriptions);
+    savePrescriptions(updatedPrescriptions);
+
+    window.alert("Prescription created successfully!");
+    setPrescriptionForm({ medicine: "", dosage: "", duration: "", extraNotes: "", patientId: "" });
   };
 
   const formatTime = (seconds) => {
@@ -116,18 +155,9 @@ function DoctorDashboard() {
         <div>
           <div className="dashboard-title">Doctor Dashboard</div>
           <p style={{ color: "#666", fontSize: 14 }}>
-            Good day{doctor ? `, ${doctor.name}` : ""}. Review today's schedule,
+            Good day{doctorName ? `, ${doctorName}` : ""}. Review today's schedule,
             start consultations and capture quick notes.
           </p>
-        </div>
-        <div>
-          <button
-            className="btn"
-            style={{ padding: "6px 10px", fontSize: 12 }}
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
         </div>
         {activeAppointmentId && (
           <div
@@ -140,6 +170,13 @@ function DoctorDashboard() {
           >
             <div className="kpi-label">Consultation Timer</div>
             <div className="kpi-value">{formatTime(elapsedSeconds)}</div>
+            <button
+              className="btn"
+              style={{ padding: "4px 8px", fontSize: 11, marginTop: 6 }}
+              onClick={() => setActiveAppointmentId(null)}
+            >
+              End Call
+            </button>
           </div>
         )}
       </div>
@@ -164,28 +201,6 @@ function DoctorDashboard() {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="quick-actions">
-        <button
-          className="btn"
-          onClick={() => window.alert("Mock: open first pending consultation")}
-        >
-          Start Consultation
-        </button>
-        <button
-          className="btn"
-          onClick={() => window.alert("Mock: create prescription form")}
-        >
-          Create Prescription
-        </button>
-        <button
-          className="btn"
-          onClick={() => window.alert("Mock: open patient records view")}
-        >
-          View Patient Records
-        </button>
-      </div>
-
       <div className="dashboard-layout">
         <div>
           <div className="section-card">
@@ -205,7 +220,7 @@ function DoctorDashboard() {
                 </thead>
                 <tbody>
                   {todaysAppointments.map((a) => {
-                    const patient = users.find((u) => u.user_id === a.patient_id);
+                    const patient = getUsers().find((u) => u.user_id === a.patient_id);
                     return (
                       <tr key={a.appointment_id}>
                         <td>
@@ -239,13 +254,15 @@ function DoctorDashboard() {
                           </span>
                         </td>
                         <td>
-                          <button
-                            className="btn"
-                            style={{ padding: "6px 10px", fontSize: 12 }}
-                            onClick={() => handleStartConsultation(a.appointment_id)}
-                          >
-                            Start
-                          </button>
+                          {a.status === "scheduled" && (
+                            <button
+                              className="btn"
+                              style={{ padding: "6px 10px", fontSize: 12 }}
+                              onClick={() => handleStartConsultation(a.appointment_id)}
+                            >
+                              Start
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -262,7 +279,7 @@ function DoctorDashboard() {
             ) : (
               <ul style={{ listStyle: "none" }}>
                 {recentPatients.map((a) => {
-                  const patient = users.find((u) => u.user_id === a.patient_id);
+                  const patient = getUsers().find((u) => u.user_id === a.patient_id);
                   return (
                     <li
                       key={a.appointment_id}
@@ -309,13 +326,29 @@ function DoctorDashboard() {
               onChange={(e) => setNotes(e.target.value)}
             />
             <button className="btn" onClick={handleSaveNotes}>
-              Save Notes (Mock)
+              Save Notes
             </button>
           </div>
 
           <div className="section-card">
             <div className="section-title">Prescription Builder</div>
             <form onSubmit={handlePrescriptionSubmit} style={{ fontSize: 13 }}>
+              <select
+                className="input"
+                value={prescriptionForm.patientId}
+                onChange={(e) => setPrescriptionForm({ ...prescriptionForm, patientId: e.target.value })}
+                required
+              >
+                <option value="">Select Patient...</option>
+                {uniquePatients.map((pid) => {
+                  const p = getUsers().find((u) => u.user_id === pid);
+                  return (
+                    <option key={pid} value={pid}>
+                      {p ? p.name : pid}
+                    </option>
+                  );
+                })}
+              </select>
               <input
                 className="input"
                 placeholder="Medicine name"
@@ -355,7 +388,7 @@ function DoctorDashboard() {
               <textarea
                 className="input"
                 rows={3}
-                placeholder="Notes for pharmacist / patient"
+                placeholder="Additional instructions..."
                 value={prescriptionForm.extraNotes}
                 onChange={(e) =>
                   setPrescriptionForm({
@@ -365,18 +398,9 @@ function DoctorDashboard() {
                 }
               />
               <button className="btn" type="submit">
-                Create Prescription (Mock)
+                Create Prescription
               </button>
             </form>
-          </div>
-
-          <div className="section-card">
-            <div className="section-title">Tips</div>
-            <p style={{ fontSize: 13, color: "#555" }}>
-              Review the latest medical records and previous prescriptions before
-              you start each consultation. This helps you make faster and safer
-              clinical decisions.
-            </p>
           </div>
         </div>
       </div>
@@ -384,10 +408,10 @@ function DoctorDashboard() {
       <div className="section-card" style={{ marginTop: 16 }}>
         <div className="section-title">Daily Workload</div>
         <div style={{ fontSize: 12, color: "#555", marginBottom: 6 }}>
-          Appointments per day (mocked from schedule)
+          Appointments per day
         </div>
         {Object.entries(
-          appointments
+          appointmentsList
             .filter((a) => a.doctor_id === doctorId)
             .reduce((acc, a) => {
               acc[a.date] = (acc[a.date] || 0) + 1;

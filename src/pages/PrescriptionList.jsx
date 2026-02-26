@@ -1,9 +1,10 @@
-import { prescriptions, users } from "../mockData";
+import { getPrescriptions, getUsers } from "../mockData";
+import { useAuth } from "../AuthContext";
 
 function PrescriptionList() {
-  // Assume logged-in patient is user_id 3
-  const patientId = 3;
-  const myPrescriptions = prescriptions.filter((p) => p.patient_id === patientId);
+  const { user } = useAuth();
+  const patientId = user?.user_id || 3;
+  const myPrescriptions = getPrescriptions().filter((p) => p.patient_id === patientId);
 
   return (
     <div className="card">
@@ -23,15 +24,15 @@ function PrescriptionList() {
         </thead>
         <tbody>
           {myPrescriptions.map((p) => {
-            const doctor = users.find((u) => u.user_id === p.doctor_id);
+            const doctor = getUsers().find((u) => u.user_id === p.doctor_id);
             return (
               <tr key={p.prescription_id}>
                 <td>{doctor ? doctor.name : p.doctor_id}</td>
                 <td>{p.medicines}</td>
                 <td>{p.date}</td>
-              <td>
-                <button className="btn">Download</button>
-              </td>
+                <td>
+                  <button className="btn">Download</button>
+                </td>
               </tr>
             );
           })}

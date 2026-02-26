@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { getUsers, saveUsers } from "../mockData";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -25,8 +26,33 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Simple front-end only "login" that just stores the role
-    login(role);
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
+
+    const existingUsers = getUsers() || [];
+    const user = existingUsers.find(
+      (u) => u.email === email && (u.password === password || u.password_hash === password) && u.role === role && u.status !== "disabled"
+    );
+
+    if (!user) {
+      alert("Invalid email, password, or role selection! Or your account may be disabled.");
+      return;
+    }
+
+    // Update last_login
+    const updatedUsers = existingUsers.map(u => {
+      if (u.user_id === user.user_id) {
+        return { ...u, last_login: new Date().toLocaleString() };
+      }
+      return u;
+    });
+    saveUsers(updatedUsers);
+    const updatedUser = updatedUsers.find(u => u.user_id === user.user_id);
+
+    // Set user context
+    login(updatedUser);
 
     if (role === "admin") {
       navigate("/admin");

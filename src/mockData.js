@@ -1,178 +1,25 @@
 // Simple in-memory mock data matching the schemas you described
 
 //Authentication / Users
-export const users = [
-  {
-    user_id: 1,
-    name: "Admin One",
-    email: "admin@example.com",
-    password_hash: "admin123", // demo only; real app would hash this
-    role: "admin",
-    status: "active",
-    created_at: "2026-02-01"
-  },
-  {
-    user_id: 2,
-    name: "Dr. Sharma",
-    email: "doctor@example.com",
-    password_hash: "doctor123",
-    role: "doctor",
-    status: "active",
-    created_at: "2026-02-10"
-  },
-  {
-    user_id: 3,
-    name: "Ravi Kumar",
-    email: "patient@example.com",
-    password_hash: "patient123",
-    role: "patient",
-    status: "active",
-    created_at: "2026-02-15"
-  },
-  {
-    user_id: 4,
-    name: "PharmaOne",
-    email: "pharma@example.com",
-    password_hash: "pharma123",
-    role: "pharmacist",
-    status: "active",
-    created_at: "2026-02-18"
-  }
-];
+export const users = [];
 
 //Appointments
-export const appointments = [
-  {
-    appointment_id: 1,
-    patient_id: 3,
-    doctor_id: 2,
-    date: "2026-02-20",
-    time: "10:00",
-    status: "scheduled",
-    reason: "General consultation",
-    meeting_link: "https://meet.example.com/abc123"
-  },
-  {
-    appointment_id: 2,
-    patient_id: 3,
-    doctor_id: 2,
-    date: "2026-02-21",
-    time: "11:30",
-    status: "scheduled",
-    reason: "Follow-up",
-    meeting_link: "https://meet.example.com/def456"
-  }
-];
+export const appointments = [];
 
 //E-Prescriptions
-export const prescriptions = [
-  {
-    prescription_id: 1,
-    doctor_id: 2,
-    patient_id: 3,
-    medicines: "Paracetamol 500mg",
-    dosage: "1 tablet twice a day",
-    notes: "After food",
-    date: "2026-02-12",
-    status: "issued"
-  },
-  {
-    prescription_id: 2,
-    doctor_id: 2,
-    patient_id: 3,
-    medicines: "Ibuprofen 400mg",
-    dosage: "1 tablet if pain",
-    notes: "Max 3 per day",
-    date: "2026-02-08",
-    status: "issued"
-  }
-];
+export const prescriptions = [];
 
 //Medical Records
-export const medicalRecords = [
-  {
-    record_id: 1,
-    patient_id: 3,
-    file_url: "https://storage.example.com/blood-test.pdf",
-    description: "Blood Test Report",
-    uploaded_by: "lab",
-    date: "2026-02-12"
-  },
-  {
-    record_id: 2,
-    patient_id: 3,
-    file_url: "https://storage.example.com/xray.pdf",
-    description: "Chest X-Ray",
-    uploaded_by: "lab",
-    date: "2026-02-05"
-  }
-];
+export const medicalRecords = [];
 
 //Pharmacy Orders
-export const orders = [
-  {
-    order_id: 1,
-    prescription_id: 1,
-    pharmacist_id: 4,
-    status: "received",
-    stage: 1,
-    delivery_date: "2026-02-20"
-  },
-  {
-    order_id: 2,
-    prescription_id: 2,
-    pharmacist_id: 4,
-    status: "delivered",
-    stage: 4,
-    delivery_date: "2026-02-15"
-  }
-];
+export const orders = [];
 
 // Simple patient notifications
-export const patientNotifications = [
-  {
-    id: 1,
-    type: "appointment",
-    message: "Appointment with Dr. Sharma tomorrow at 10:00 AM",
-    time: "2h ago"
-  },
-  {
-    id: 2,
-    type: "prescription",
-    message: "New prescription issued by Dr. Sharma",
-    time: "1d ago"
-  },
-  {
-    id: 3,
-    type: "record",
-    message: "Latest blood test report uploaded",
-    time: "3d ago"
-  }
-];
+export const patientNotifications = [];
 
 // Admin system activity logs
-export const systemActivity = [
-  {
-    id: 1,
-    message: "New doctor registered: Dr. Sharma",
-    time: "5m ago"
-  },
-  {
-    id: 2,
-    message: "Appointment booked by Ravi Kumar",
-    time: "30m ago"
-  },
-  {
-    id: 3,
-    message: "Prescription issued for Ravi Kumar",
-    time: "1h ago"
-  },
-  {
-    id: 4,
-    message: "Pharmacist dispensed order #2",
-    time: "3h ago"
-  }
-];
+export const systemActivity = [];
 
 // Simple medicine inventory for pharmacist view
 export const medicineInventory = [
@@ -212,11 +59,78 @@ export const securityStatus = {
   dbStatus: "Primary + replica (OK)"
 };
 
-// Simple health profile for patient
-export const patientHealthProfile = {
-  patient_id: 3,
-  bloodGroup: "B+",
-  age: 29,
-  allergies: ["Penicillin", "Peanuts"],
-  chronicConditions: ["Asthma"]
+// Patient health profiles
+export const healthProfiles = [];
+
+// Data Helpers
+export const getUsers = () => {
+  const local = localStorage.getItem("users");
+  return local ? JSON.parse(local) : users;
+};
+export const saveUsers = (data) => {
+  localStorage.setItem("users", JSON.stringify(data));
+};
+
+export const getAppointments = () => {
+  const local = localStorage.getItem("appointments");
+  return local ? JSON.parse(local) : appointments;
+};
+export const saveAppointments = (data) => {
+  localStorage.setItem("appointments", JSON.stringify(data));
+};
+
+export const getMedicalRecords = () => {
+  const local = localStorage.getItem("medicalRecords");
+  return local ? JSON.parse(local) : medicalRecords;
+};
+export const saveMedicalRecords = (data) => {
+  localStorage.setItem("medicalRecords", JSON.stringify(data));
+};
+
+export const getPrescriptions = () => {
+  const local = localStorage.getItem("prescriptions");
+  return local ? JSON.parse(local) : prescriptions;
+};
+export const savePrescriptions = (data) => {
+  localStorage.setItem("prescriptions", JSON.stringify(data));
+};
+
+export const getOrders = () => {
+  const local = localStorage.getItem("orders");
+  return local ? JSON.parse(local) : orders;
+};
+export const saveOrders = (data) => {
+  localStorage.setItem("orders", JSON.stringify(data));
+};
+
+export const getSystemActivity = () => {
+  const local = localStorage.getItem("systemActivity");
+  return local ? JSON.parse(local) : systemActivity;
+};
+export const saveSystemActivity = (data) => {
+  localStorage.setItem("systemActivity", JSON.stringify(data));
+};
+
+export const getMedicineInventory = () => {
+  const local = localStorage.getItem("medicineInventory");
+  return local ? JSON.parse(local) : medicineInventory;
+};
+export const saveMedicineInventory = (data) => {
+  localStorage.setItem("medicineInventory", JSON.stringify(data));
+};
+
+export const getPatientNotifications = () => {
+  const local = localStorage.getItem("patientNotifications");
+  return local ? JSON.parse(local) : patientNotifications;
+};
+export const savePatientNotifications = (data) => {
+  localStorage.setItem("patientNotifications", JSON.stringify(data));
+};
+
+export const getHealthProfiles = () => {
+  const local = localStorage.getItem("healthProfiles");
+  return local ? JSON.parse(local) : healthProfiles;
+};
+export const saveHealthProfiles = (data) => {
+  localStorage.setItem("healthProfiles", JSON.stringify(data));
 };

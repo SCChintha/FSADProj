@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { getUsers, saveUsers } from "../mockData";
 
 function Signup() {
   const [name, setName] = useState("");
@@ -13,9 +14,37 @@ function Signup() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // For now we just "log in" with the selected role after signup.
-    // In a real app, this would call a backend API and persist the user.
-    login(role);
+    // Password validation: min 8 length, uppercase, lowercase, number, special char
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      alert("Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.");
+      return;
+    }
+
+    const existingUsers = getUsers() || [];
+    const userExists = existingUsers.find((u) => u.email === email);
+
+    if (userExists) {
+      alert("User with this email already exists!");
+      return;
+    }
+
+    // Generate a pseudo user_id to integrate with mock data if necessary
+    const newUserId = Date.now();
+    const newUser = {
+      user_id: newUserId,
+      name,
+      email,
+      password,
+      role,
+      status: "active",
+      created_at: new Date().toISOString().split("T")[0]
+    };
+    existingUsers.push(newUser);
+    saveUsers(existingUsers);
+
+    // Log in with the newly created user object
+    login(newUser);
 
     if (role === "admin") {
       navigate("/admin");

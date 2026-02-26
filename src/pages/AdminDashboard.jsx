@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { users, appointments, systemActivity, securityStatus } from "../mockData";
+import { getUsers, saveUsers, getAppointments, systemActivity, securityStatus } from "../mockData";
 import { useAuth } from "../AuthContext";
 
 function AdminDashboard() {
-  const totalDoctors = users.filter((u) => u.role === "doctor").length;
-  const totalPatients = users.filter((u) => u.role === "patient").length;
-  const totalPharmacists = users.filter((u) => u.role === "pharmacist").length;
-
+  const [usersList, setUsersList] = useState(getUsers());
   const [search, setSearch] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", role: "doctor", password: "" });
 
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const adminName = user?.name || "Admin";
 
-  const filteredUsers = users.filter((u) => {
+  const totalDoctors = usersList.filter((u) => u.role === "doctor").length;
+  const totalPatients = usersList.filter((u) => u.role === "patient").length;
+  const totalPharmacists = usersList.filter((u) => u.role === "pharmacist").length;
+
+  const filteredUsers = usersList.filter((u) => {
     const term = search.toLowerCase();
     return (
       u.name.toLowerCase().includes(term) ||
@@ -22,13 +26,51 @@ function AdminDashboard() {
     );
   });
 
-  const handleQuickAction = (label) => {
-    window.alert("Mock admin action: " + label);
-  };
-
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const handleAddUserSubmit = (e) => {
+    e.preventDefault();
+    const newUserObj = {
+      user_id: Date.now(),
+      name: newUser.name,
+      email: newUser.email,
+      password: newUser.password,
+      role: newUser.role,
+      status: "active",
+      created_at: new Date().toISOString().split("T")[0]
+    };
+    const updatedUsers = [...usersList, newUserObj];
+    setUsersList(updatedUsers);
+    saveUsers(updatedUsers);
+    setShowAddModal(false);
+    setNewUser({ name: "", email: "", role: "doctor", password: "" });
+  };
+
+  const toggleUserStatus = (userId) => {
+    const updatedUsers = usersList.map((u) =>
+      u.user_id === userId ? { ...u, status: u.status === "active" ? "disabled" : "active" } : u
+    );
+    setUsersList(updatedUsers);
+    saveUsers(updatedUsers);
+  };
+
+  const deleteUser = (userId) => {
+    if (window.confirm("Are you sure you want to delete this user? This cannot be undone.")) {
+      const updatedUsers = usersList.filter((u) => u.user_id !== userId);
+      setUsersList(updatedUsers);
+      saveUsers(updatedUsers);
+    }
+  };
+
+  const handleQuickAction = (label) => {
+    if (label === "Add User") {
+      setShowAddModal(true);
+    } else {
+      window.alert(label + " feature is coming soon!");
+    }
   };
 
   return (
@@ -37,17 +79,8 @@ function AdminDashboard() {
         <div>
           <div className="dashboard-title">Admin Dashboard</div>
           <p style={{ color: "#666", fontSize: 14 }}>
-            Monitor platform health, manage users and review system activity.
+            Welcome, {adminName}. Monitor platform health, manage users and review system activity.
           </p>
-        </div>
-        <div>
-          <button
-            className="btn"
-            style={{ padding: "6px 10px", fontSize: 12 }}
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
         </div>
       </div>
 
@@ -55,7 +88,7 @@ function AdminDashboard() {
       <div className="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-label">Total Users</div>
-          <div className="kpi-value">{users.length}</div>
+          <div className="kpi-value">{usersList.length}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Total Doctors</div>
@@ -67,7 +100,7 @@ function AdminDashboard() {
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Total Appointments</div>
-          <div className="kpi-value">{appointments.length}</div>
+          <div className="kpi-value">{getAppointments().length}</div>
         </div>
       </div>
 
@@ -105,6 +138,7 @@ function AdminDashboard() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Last Login</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -124,14 +158,26 @@ function AdminDashboard() {
                         {u.status}
                       </span>
                     </td>
+                    <td style={{ fontSize: 12, color: "#666" }}>
+                      {u.last_login || "Never"}
+                    </td>
                     <td>
                       <button
                         className="btn"
-                        style={{ padding: "6px 10px", fontSize: 12 }}
-                        onClick={() => window.alert("Mock: view profile for " + u.name)}
+                        style={{ padding: "6px 10px", fontSize: 12, marginRight: "5px" }}
+                        onClick={() => toggleUserStatus(u.user_id)}
                       >
-                        View / Disable
+                        {u.status === "active" ? "Disable" : "Enable"}
                       </button>
+                      {u.user_id !== user?.user_id && (
+                        <button
+                          className="btn"
+                          style={{ padding: "6px 10px", fontSize: 12, background: "#d32f2f" }}
+                          onClick={() => deleteUser(u.user_id)}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -177,6 +223,64 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {showAddModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="section-title" style={{ marginBottom: 16 }}>
+              Add New User
+            </div>
+            <form onSubmit={handleAddUserSubmit} style={{ fontSize: 13 }}>
+              <input
+                className="input"
+                placeholder="Full Name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                required
+              />
+              <input
+                className="input"
+                type="email"
+                placeholder="Email Address"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+              <input
+                className="input"
+                type="password"
+                placeholder="Password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                required
+              />
+              <select
+                className="input"
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+              >
+                <option value="doctor">Doctor</option>
+                <option value="patient">Patient</option>
+                <option value="pharmacist">Pharmacist</option>
+                <option value="admin">Admin</option>
+              </select>
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <button className="btn" type="submit">
+                  Save User
+                </button>
+                <button
+                  className="btn"
+                  type="button"
+                  style={{ background: "#ccc", color: "#333", border: "none" }}
+                  onClick={() => setShowAddModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

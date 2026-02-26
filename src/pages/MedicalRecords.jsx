@@ -1,9 +1,10 @@
-import { medicalRecords } from "../mockData";
+import { getMedicalRecords } from "../mockData";
+import { useAuth } from "../AuthContext";
 
 function MedicalRecords() {
-  // Assume logged-in patient is user_id 3
-  const patientId = 3;
-  const records = medicalRecords.filter((r) => r.patient_id === patientId);
+  const { user } = useAuth();
+  const patientId = user?.user_id || 3;
+  const records = getMedicalRecords().filter((r) => r.patient_id === patientId);
 
   return (
     <div className="card">

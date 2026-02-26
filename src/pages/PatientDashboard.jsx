@@ -1,33 +1,73 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  appointments,
-  prescriptions,
-  medicalRecords,
-  users,
-  patientNotifications,
-  patientHealthProfile
+  getUsers,
+  getPatientNotifications,
+  getAppointments,
+  getPrescriptions,
+  getMedicalRecords,
+  saveMedicalRecords,
+  saveUsers,
+  getHealthProfiles,
+  saveHealthProfiles
 } from "../mockData";
 import { useAuth } from "../AuthContext";
 
 function PatientDashboard() {
-  // Demo: logged‑in patient is user_id 3
-  const patientId = 3;
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const patient = users.find((u) => u.user_id === patientId);
+  const { user, logout } = useAuth();
 
-  const patientAppointments = appointments.filter((a) => a.patient_id === patientId);
+  // Demo: fallback to mock user_id 3 if context user lacks an ID (or just signed up)
+  const patientId = user?.user_id || 3;
+  const mockPatient = getUsers().find((u) => u.user_id === patientId);
+  const patientName = user?.name || (mockPatient ? mockPatient.name : "");
+
+  const patientAppointments = getAppointments().filter((a) => a.patient_id === patientId);
 
   const upcomingAppointments = patientAppointments.filter(
     (a) => a.status === "scheduled"
   );
 
-  const patientPrescriptions = prescriptions.filter(
+  const patientPrescriptions = getPrescriptions().filter(
     (p) => p.patient_id === patientId
   );
 
-  const patientRecords = medicalRecords.filter((r) => r.patient_id === patientId);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    mockPatient ? mockPatient.notifications_enabled !== false : true
+  );
+
+  const allProfiles = getHealthProfiles();
+  const existingProfile = allProfiles.find((p) => p.patient_id === patientId) || {
+    patient_id: patientId,
+    bloodGroup: "",
+    age: "",
+    allergies: [],
+    chronicConditions: []
+  };
+
+  const [healthProfile, setHealthProfile] = useState(existingProfile);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  const handleSaveProfile = () => {
+    const profiles = getHealthProfiles();
+    const filtered = profiles.filter((p) => p.patient_id !== patientId);
+    filtered.push(healthProfile);
+    saveHealthProfiles(filtered);
+    setIsEditingProfile(false);
+  };
+
+  const handleToggleNotifications = (e) => {
+    const enabled = e.target.checked;
+    setNotificationsEnabled(enabled);
+    const allUsers = getUsers();
+    const updatedUsers = allUsers.map((u) =>
+      u.user_id === patientId ? { ...u, notifications_enabled: enabled } : u
+    );
+    saveUsers(updatedUsers);
+  };
+
+  const [recordsList, setRecordsList] = useState(getMedicalRecords());
+  const patientRecords = recordsList.filter((r) => r.patient_id === patientId);
 
   const sortedByDateDesc = [...patientPrescriptions].sort(
     (a, b) => new Date(b.date) - new Date(a.date)
@@ -72,6 +112,23 @@ function PatientDashboard() {
     setTimeout(() => {
       setUploadProgress(100);
       setIsUploading(false);
+
+      // Save the mock record
+      const newRec = {
+        record_id: Date.now(),
+        patient_id: patientId,
+        file_url: "https://storage.example.com/" + fileName,
+        description: fileName,
+        uploaded_by: "patient",
+        date: new Date().toISOString().split("T")[0]
+      };
+
+      setRecordsList(prev => {
+        const updated = [...prev, newRec];
+        saveMedicalRecords(updated);
+        return updated;
+      });
+
     }, 1500);
   };
 
@@ -111,20 +168,11 @@ function PatientDashboard() {
         <div>
           <div className="dashboard-title">Patient Dashboard</div>
           <p style={{ color: "#666", fontSize: 14 }}>
-            Welcome back{patient ? `, ${patient.name}` : ""}. Manage appointments,
+            Welcome back{patientName ? `, ${patientName}` : ""}. Manage appointments,
             prescriptions and medical records in one place.
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ marginBottom: 8 }}>
-            <button
-              className="btn"
-              style={{ padding: "6px 10px", fontSize: 12 }}
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
           <div style={{ fontSize: 12, color: "#999" }}>Next Appointment</div>
           {nextAppointment ? (
             <div style={{ fontWeight: "bold", fontSize: 14 }}>
@@ -183,23 +231,60 @@ function PatientDashboard() {
       <div className="dashboard-layout">
         <div>
           <div className="section-card" style={{ marginBottom: 16 }}>
-            <div className="section-title">Health Summary</div>
-            <div style={{ fontSize: 13 }}>
-              <div style={{ marginBottom: 4 }}>
-                <strong>Blood group:</strong> {patientHealthProfile.bloodGroup}
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <strong>Age:</strong> {patientHealthProfile.age} years
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <strong>Allergies:</strong>{" "}
-                {patientHealthProfile.allergies.join(", ")}
-              </div>
-              <div>
-                <strong>Chronic conditions:</strong>{" "}
-                {patientHealthProfile.chronicConditions.join(", ")}
-              </div>
+            <div className="section-title" style={{ display: "flex", justifyContent: "space-between" }}>
+              Health Summary
+              <button
+                className="btn"
+                style={{ padding: "4px 8px", fontSize: 11, marginRight: 0 }}
+                onClick={() => {
+                  if (isEditingProfile) {
+                    handleSaveProfile();
+                  } else {
+                    setIsEditingProfile(true);
+                  }
+                }}
+              >
+                {isEditingProfile ? "Save" : "Edit"}
+              </button>
             </div>
+
+            {isEditingProfile ? (
+              <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div>
+                  <label>Blood Group:</label>
+                  <input className="input" style={{ margin: "4px 0" }} value={healthProfile.bloodGroup} onChange={(e) => setHealthProfile({ ...healthProfile, bloodGroup: e.target.value })} />
+                </div>
+                <div>
+                  <label>Age:</label>
+                  <input className="input" type="number" style={{ margin: "4px 0" }} value={healthProfile.age} onChange={(e) => setHealthProfile({ ...healthProfile, age: e.target.value })} />
+                </div>
+                <div>
+                  <label>Allergies (comma separated):</label>
+                  <input className="input" style={{ margin: "4px 0" }} value={healthProfile.allergies.join(", ")} onChange={(e) => setHealthProfile({ ...healthProfile, allergies: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} />
+                </div>
+                <div>
+                  <label>Chronic Conditions (comma separated):</label>
+                  <input className="input" style={{ margin: "4px 0" }} value={healthProfile.chronicConditions.join(", ")} onChange={(e) => setHealthProfile({ ...healthProfile, chronicConditions: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13 }}>
+                <div style={{ marginBottom: 4 }}>
+                  <strong>Blood group:</strong> {healthProfile.bloodGroup || "Not specified"}
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <strong>Age:</strong> {healthProfile.age ? healthProfile.age + " years" : "Not specified"}
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <strong>Allergies:</strong>{" "}
+                  {healthProfile.allergies.length > 0 ? healthProfile.allergies.join(", ") : "None"}
+                </div>
+                <div>
+                  <strong>Chronic conditions:</strong>{" "}
+                  {healthProfile.chronicConditions.length > 0 ? healthProfile.chronicConditions.join(", ") : "None"}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="section-card">
@@ -219,7 +304,7 @@ function PatientDashboard() {
                 </thead>
                 <tbody>
                   {upcomingAppointments.map((a) => {
-                    const doctor = users.find((u) => u.user_id === a.doctor_id);
+                    const doctor = getUsers().find((u) => u.user_id === a.doctor_id);
                     return (
                       <tr key={a.appointment_id}>
                         <td>{doctor ? doctor.name : a.doctor_id}</td>
@@ -300,7 +385,7 @@ function PatientDashboard() {
             ) : (
               <ul style={{ listStyle: "none" }}>
                 {recentPrescriptions.map((p) => {
-                  const doctor = users.find((u) => u.user_id === p.doctor_id);
+                  const doctor = getUsers().find((u) => u.user_id === p.doctor_id);
                   return (
                     <li
                       key={p.prescription_id}
@@ -323,22 +408,39 @@ function PatientDashboard() {
 
         <div>
           <div className="section-card">
-            <div className="section-title">Notifications</div>
-            {patientNotifications.map((n) => (
-              <div
-                key={n.id}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  background: "#f5f7fb",
-                  marginBottom: 8,
-                  fontSize: 13
-                }}
-              >
-                <div style={{ marginBottom: 2 }}>{n.message}</div>
-                <div style={{ fontSize: 11, color: "#999" }}>{n.time}</div>
-              </div>
-            ))}
+            <div className="section-title" style={{ display: "flex", justifyContent: "space-between" }}>
+              Notifications
+              <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: "6px", fontWeight: "normal" }}>
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={handleToggleNotifications}
+                /> Enable
+              </label>
+            </div>
+            {notificationsEnabled ? (
+              getPatientNotifications().length === 0 ? (
+                <p style={{ fontSize: 13, color: "#777" }}>No new notifications.</p>
+              ) : (
+                getPatientNotifications().map((n) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "#f5f7fb",
+                      marginBottom: 8,
+                      fontSize: 13
+                    }}
+                  >
+                    <div style={{ marginBottom: 2 }}>{n.message}</div>
+                    <div style={{ fontSize: 11, color: "#999" }}>{n.time}</div>
+                  </div>
+                ))
+              )
+            ) : (
+              <p style={{ fontSize: 13, color: "#777" }}>Notifications are disabled.</p>
+            )}
           </div>
 
           <div className="section-card">
