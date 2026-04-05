@@ -1,0 +1,47 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: antifsad-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-antifsad}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-antifsad_root_password}
+      MYSQL_USER: ${MYSQL_USER:-antifsad_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-antifsad_app_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: antifsad-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-antifsad}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DATASOURCE_USER: ${MYSQL_USER:-antifsad_user}
+      DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-antifsad_app_password}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET:-ChangeThisJwtSecretToAStrong32ByteValue}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:

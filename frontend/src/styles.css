@@ -792,6 +792,7 @@ select {
   background: rgba(255, 255, 255, 0.12);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
@@ -877,6 +878,7 @@ select {
   border-radius: 18px;
   background: rgba(2, 6, 23, 0.55);
   color: white;
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
@@ -1126,6 +1128,7 @@ select {
 .post-call-overlay,
 .incoming-call-overlay {
   background: rgba(2, 6, 23, 0.58);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   z-index: 7;
 }
