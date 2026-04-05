@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+backend/target/
+backend-live.log
+backend-live.err.log
 
 # Editor directories and files
 .vscode/*
