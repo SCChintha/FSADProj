@@ -17,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/calls")
-@CrossOrigin(origins = "http://localhost:5173")
 public class CallController {
 
     private final CallSessionService callSessionService;

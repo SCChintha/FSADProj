@@ -17,7 +17,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping({"/api/pharmacy/inventory", "/api/inventory", "/inventory"})
-@CrossOrigin(origins = "http://localhost:5173")
 public class InventoryController {
     private static final Logger log = LoggerFactory.getLogger(InventoryController.class);
 

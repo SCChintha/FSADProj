@@ -18,7 +18,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping({"/api/prescriptions", "/prescriptions"})
-@CrossOrigin(origins = "http://localhost:5173")
 public class PrescriptionController {
     private static final Logger log = LoggerFactory.getLogger(PrescriptionController.class);
 

@@ -11,7 +11,6 @@ import com.antifsad.backend.web.dto.PrescriptionResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping({"/api/patient", "/patient"})
-@CrossOrigin(origins = "http://localhost:5173")
 @PreAuthorize("hasAuthority('ROLE_PATIENT')")
 public class PatientController {
 
