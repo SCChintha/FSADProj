@@ -12,9 +12,7 @@ const tabs = [
   "Complaints",
   "Prescriptions",
   "Analytics",
-  "Security",
   "Logs",
-  "Settings",
 ];
 
 const defaultUserFilters = {
@@ -39,8 +37,6 @@ function AdminDashboard() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [prescriptionSummary, setPrescriptionSummary] = useState(null);
   const [logsPage, setLogsPage] = useState({ content: [], totalPages: 1, totalElements: 0 });
-  const [settings, setSettings] = useState({});
-  const [securityData, setSecurityData] = useState({ blockedUsers: [], warnLogs: [] });
   const [complaintDraft, setComplaintDraft] = useState({
     targetUserId: "",
     category: "Support",
@@ -90,25 +86,6 @@ function AdminDashboard() {
   const loadLogs = async (page = 0, severity = "") => {
     const data = await adminApi.getLogs({ page, size: 20, severity });
     setLogsPage(data);
-    if (severity === "WARN") {
-      setSecurityData((prev) => ({ ...prev, warnLogs: data.content || [] }));
-    }
-  };
-
-  const loadSettings = async () => {
-    const data = await adminApi.getSettings();
-    setSettings(data.values || {});
-  };
-
-  const loadSecurity = async () => {
-    const [blockedUsersPage, warnLogsPage] = await Promise.all([
-      adminApi.getUsers({ status: "DISABLED", size: 20, page: 0 }),
-      adminApi.getLogs({ severity: "WARN", page: 0, size: 20 }),
-    ]);
-    setSecurityData({
-      blockedUsers: blockedUsersPage.content || [],
-      warnLogs: warnLogsPage.content || [],
-    });
   };
 
   const guardedLoad = async (runner) => {
@@ -146,12 +123,6 @@ function AdminDashboard() {
       }
       if (activeTab === "Logs") {
         await loadLogs();
-      }
-      if (activeTab === "Settings") {
-        await loadSettings();
-      }
-      if (activeTab === "Security") {
-        await loadSecurity();
       }
     });
   }, [activeTab, roleForTab]);
@@ -285,16 +256,6 @@ function AdminDashboard() {
       await loadComplaints();
     } catch (err) {
       toast.error(err.message || "Failed to create complaint.");
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    try {
-      const data = await adminApi.updateSettings(settings);
-      setSettings(data.values || {});
-      toast.success("Settings saved.");
-    } catch (err) {
-      toast.error(err.message || "Failed to save settings.");
     }
   };
 
@@ -520,29 +481,6 @@ function AdminDashboard() {
         </div>
       )}
 
-      {activeTab === "Security" && (
-        <div className="dashboard-grid">
-          <section className="card">
-            <div className="section-header"><h2>Blocked Users</h2></div>
-            {(securityData.blockedUsers || []).map((user) => (
-              <div key={user.id} className="feed-item">
-                <strong>{user.name}</strong>
-                <span>{user.email} | {titleCase(user.role)}</span>
-              </div>
-            ))}
-          </section>
-          <section className="card">
-            <div className="section-header"><h2>Warn-level Logs</h2></div>
-            {(securityData.warnLogs || []).map((log) => (
-              <div key={log.id} className="feed-item">
-                <strong>{titleCase(log.action)}</strong>
-                <span>{log.actorName} | {log.details}</span>
-              </div>
-            ))}
-          </section>
-        </div>
-      )}
-
       {activeTab === "Logs" && (
         <section className="card">
           <div className="section-header"><h2>Audit Logs</h2></div>
@@ -568,20 +506,6 @@ function AdminDashboard() {
         </section>
       )}
 
-      {activeTab === "Settings" && (
-        <section className="card">
-          <div className="section-header"><h2>System Settings</h2></div>
-          <div className="form-grid">
-            {Object.entries(settings).map(([key, value]) => (
-              <div key={key}>
-                <label>{key}</label>
-                <input className="input" value={value} onChange={(e) => setSettings((prev) => ({ ...prev, [key]: e.target.value }))} />
-              </div>
-            ))}
-          </div>
-          <button className="btn" onClick={handleSaveSettings}>Save Settings</button>
-        </section>
-      )}
     </div>
   );
 }
