@@ -6,7 +6,7 @@ import { apiRequest } from "../apiClient";
 import { loadDoctorData, titleCase } from "../liveData";
 import DoctorProfile from "./profile/DoctorProfile";
 
-const tabs = ["Overview", "Profile", "Appointments", "Consultation", "Prescriptions", "Patients"];
+const tabs = ["Overview", "Profile", "Appointments", "Prescriptions", "Patients"];
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function DoctorDashboard() {
@@ -267,15 +267,6 @@ function DoctorDashboard() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </section>
-          )}
-
-          {activeTab === "Consultation" && (
-            <section className="panel">
-              <div className="section-header"><h2>Consultation room</h2></div>
-              <div className="empty-state">
-                Video, chat, and post-call summary endpoints are not implemented in the backend yet, so no placeholder messages are shown.
               </div>
             </section>
           )}
